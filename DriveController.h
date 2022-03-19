@@ -4,36 +4,37 @@
 #define DriveController_h
 
 class DriveController {
-   public:
-    DriveController(float robotRadius, float wheelPerimeter, DCMotor* motorFront, DCMotor* motorLeft, DCMotor* motorRight, DCMotor* motorBack);
+  public:
+    DriveController(float robotRadius, float wheelPerimeter, uint8_t motorBootPower, DCMotor* motorFront, DCMotor* motorLeft, DCMotor* motorRight, DCMotor* motorBack);
     ~DriveController();
 
-    void moveForward(uint8_t speed);
-    void moveBackward(uint8_t speed);
-    void moveLeft(uint8_t speed);
-    void moveRight(uint8_t speed);
+    void moveForward(unsigned int speed);
+    void moveBackward(unsigned int speed);
+    void moveLeft(unsigned int speed);
+    void moveRight(unsigned int speed);
 
-    void moveForward(uint8_t speed, float distance,DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
-    void moveBackward(uint8_t speed, float distance,DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
-    void moveLeft(uint8_t speed, float distance,DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
-    void moveRight(uint8_t speed, float distance,DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
+    void moveForward(unsigned int speed, float distance, DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
+    void moveBackward(unsigned int speed, float distance, DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
+    void moveLeft(unsigned int speed, float distance, DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
+    void moveRight(unsigned int speed, float distance, DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
 
-    void rotateLeft(uint8_t speed, float degree,DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
-    void rotateRight(uint8_t speed, float degree,DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
+    void rotateLeft(unsigned int speed, float degree, DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
+    void rotateRight(unsigned int speed, float degree, DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
 
     void stop(DCMotor::ZeroPowerBehavior zeroPowerBehavior = DCMotor::ZeroPowerBehavior::BRAKE);
 
     bool isIdle();
 
-   private:
+  private:
     float robotRadius, wheelPerimeter;
-    
+    uint8_t motorBootPower;
+
     DCMotor* motorFront;
     DCMotor* motorLeft;
     DCMotor* motorRight;
     DCMotor* motorBack;
 
-    void initInfo(float robotRadius, float wheelPerimeter);
+    void initInfo(float robotRadius, float wheelPerimeter, uint8_t motorBootPower);
 };
 
 #endif

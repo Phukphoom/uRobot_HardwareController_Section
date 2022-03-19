@@ -5,15 +5,15 @@
 #define ServoNMController_h
 
 class ServoNMController {
-   public:
+  public:
     ServoNMController(Servo *servo);
     ~ServoNMController();
 
-    void goToDeg(float degree,uint16_t changingDelay = 10);
+    void goToDeg(float degree, uint16_t changingDelay = 10);
 
-   private:
+  private:
     Servo *servo;
-    
+
     uint8_t lastDeg = 0;
 };
 

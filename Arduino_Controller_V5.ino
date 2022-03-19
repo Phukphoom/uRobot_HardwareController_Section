@@ -7,42 +7,43 @@
 /* ---------------------------- INFO DEFINE -------------------------------------------------------- */
 #define ROBOT_RADIUS 14.5
 #define WHEEL_PERIMETER 31.88
+#define MOTOR_BOOT_POWER 50
 
 /* ---------------------------- PIN DEFINE --------------------------------------------------------- */
-#define IR_LEFT_PIN 34
-#define IR_RIGHT_PIN 35
+#define IR_LEFT_PIN 35
+#define IR_RIGHT_PIN 34
 
-#define SERVO_GATE_PIN_PWM 8
+#define SERVO_GATE_PIN_PWM 13
 
-#define SERVO_CRANE_PIN_PWM 44
+#define SERVO_CRANE_PIN_PWM 8
 
-#define SERVO_HLIFT_PIN_PWM 45
-#define SERVO_HLIFT_PIN_FORWARD_STOP 16
-#define SERVO_HLIFT_PIN_REVERSE_STOP 17
+#define SERVO_HLIFT_PIN_PWM 4
+#define SERVO_HLIFT_PIN_FORWARD_STOP 17
+#define SERVO_HLIFT_PIN_REVERSE_STOP 16
 
-#define MOTOR_KEEPER_PIN_INA 32
-#define MOTOR_KEEPER_PIN_INB 33
+#define MOTOR_KEEPER_PIN_INA 33
+#define MOTOR_KEEPER_PIN_INB 32
 #define MOTOR_KEEPER_PIN_PWM 5
-#define MOTOR_KEEPER_PIN_ENCODER 21
+#define MOTOR_KEEPER_PIN_ENCODER 20
 
 #define MOTOR_FRONT_PIN_INA 22
 #define MOTOR_FRONT_PIN_INB 23
-#define MOTOR_FRONT_PIN_PWM 9
-#define MOTOR_FRONT_PIN_ENCODER 2
+#define MOTOR_FRONT_PIN_PWM 6
+#define MOTOR_FRONT_PIN_ENCODER 18
 
 #define MOTOR_BACK_PIN_INA 24
 #define MOTOR_BACK_PIN_INB 25
-#define MOTOR_BACK_PIN_PWM 10
+#define MOTOR_BACK_PIN_PWM 7
 #define MOTOR_BACK_PIN_ENCODER 3
 
 #define MOTOR_LEFT_PIN_INA 26
 #define MOTOR_LEFT_PIN_INB 27
-#define MOTOR_LEFT_PIN_PWM 6
-#define MOTOR_LEFT_PIN_ENCODER 18
+#define MOTOR_LEFT_PIN_PWM 10
+#define MOTOR_LEFT_PIN_ENCODER 2
 
-#define MOTOR_RIGHT_PIN_INA 28
-#define MOTOR_RIGHT_PIN_INB 29
-#define MOTOR_RIGHT_PIN_PWM 7
+#define MOTOR_RIGHT_PIN_INA 29
+#define MOTOR_RIGHT_PIN_INB 28
+#define MOTOR_RIGHT_PIN_PWM 9
 #define MOTOR_RIGHT_PIN_ENCODER 19
 
 /* ---------------------------- Hardware Initial --------------------------------------------------- */
@@ -59,7 +60,7 @@ DCMotor motorFront(MOTOR_FRONT_PIN_INA, MOTOR_FRONT_PIN_INB, MOTOR_FRONT_PIN_PWM
 DCMotor motorLeft(MOTOR_LEFT_PIN_INA, MOTOR_LEFT_PIN_INB, MOTOR_LEFT_PIN_PWM, MOTOR_LEFT_PIN_ENCODER);
 DCMotor motorRight(MOTOR_RIGHT_PIN_INA, MOTOR_RIGHT_PIN_INB, MOTOR_RIGHT_PIN_PWM, MOTOR_RIGHT_PIN_ENCODER);
 DCMotor motorBack(MOTOR_BACK_PIN_INA, MOTOR_BACK_PIN_INB, MOTOR_BACK_PIN_PWM, MOTOR_BACK_PIN_ENCODER);
-DriveController driveController(ROBOT_RADIUS, WHEEL_PERIMETER, &motorFront, &motorLeft, &motorRight, &motorBack);
+DriveController driveController(ROBOT_RADIUS, WHEEL_PERIMETER, MOTOR_BOOT_POWER, &motorFront, &motorLeft, &motorRight, &motorBack);
 
 /* ---------------------------- Main Setup --------------------------------------------------------- */
 void setup() {
@@ -81,35 +82,39 @@ void setup() {
     servoHlift.attach(SERVO_HLIFT_PIN_PWM);
     servoHliftController.runToLimit(ServoCNController::Direction::FORWARD, 100);
 
+    driveController.stop(DCMotor::ZeroPowerBehavior::RELEASE);
+
     Serial.println("Setup Completed!");
 }
 
 /* ---------------------------- Main Logic --------------------------------------------------------- */
 void loop() {
-    if (!driveController.isIdle()) {
-        balanceMotorSpeed(&motorFront, &motorBack);
-        balanceMotorSpeed(&motorLeft, &motorRight);
+    //  unsigned long prevTime = motorRight.previousAdjustPowerTime_AutoAdjust;
 
-        // For Debuging
-        /*
-        Serial.print("dFB: ");
-        Serial.println(motorFront.getEncoderPosition() - motorBack.getEncoderPosition());
-        Serial.print("F-power: ");
-        Serial.print(motorFront.getActuallyPower());
-        Serial.print(" B-power: ");
-        Serial.println(motorBack.getActuallyPower());
-        Serial.println();
+    /* Auto adjust motor speed - (Make motor speed stable) */
+    motorFront.autoAdjustPower();
+    motorLeft.autoAdjustPower();
+    motorRight.autoAdjustPower();
+    motorBack.autoAdjustPower();
 
-        Serial.print("dLR: ");
-        Serial.println(motorLeft.getEncoderPosition() - motorRight.getEncoderPosition());
-        Serial.print("L-power: ");
-        Serial.print(motorLeft.getActuallyPower());
-        Serial.print(" R-power: ");
-        Serial.println(motorRight.getActuallyPower());
-        Serial.println();
-        */   
-    }
+    //  Serial.print("Speed:");
+    //  Serial.print(motorRight.getSpeed());
+    //  Serial.print("\tAcSpeed:");
+    //  Serial.println(motorRight.debuggingValue);
+    //  Serial.print("\tprevTime:");
+    //  Serial.print(prevTime);
+    //  Serial.print("\tTime:");
+    //  Serial.print(motorRight.previousAdjustPowerTime_AutoAdjust);
+    //  Serial.print("\tdT:");
+    //  Serial.print(int(prevTime - motorRight.previousAdjustPowerTime_AutoAdjust));
+    //  Serial.print("\tprevENC:");
+    //  Serial.print(motorRight.previousEncoderPosition_AutoAdjust);
+    //  Serial.print("\tENC:");
+    //  Serial.print(motorRight.encoderPosition);
+    //  Serial.print("\t | Power:");
+    //  Serial.println(motorRight.getPower());
 
+    /* Serial Communication with Ras-PI */
     if (Serial.available()) {
         String receiveMsg = Serial.readStringUntil('\n');
 
@@ -128,19 +133,14 @@ void loop() {
                 } else {
                     driveController.stop(DCMotor::ZeroPowerBehavior::BRAKE);
                 }
-                Serial.println("DONE");
             } else if (command == "MFC") {
                 driveController.moveForward(param_1.toInt());
-                Serial.println("DONE");
             } else if (command == "MBC") {
                 driveController.moveBackward(param_1.toInt());
-                Serial.println("DONE");
             } else if (command == "MLC") {
                 driveController.moveLeft(param_1.toInt());
-                Serial.println("DONE");
             } else if (command == "MRC") {
                 driveController.moveRight(param_1.toInt());
-                Serial.println("DONE");
             }
 
             /* DRIVE [To Target] - Command Control */
@@ -150,109 +150,135 @@ void loop() {
                 } else {
                     driveController.moveForward(param_1.toInt(), param_2.toFloat(), DCMotor::ZeroPowerBehavior::BRAKE);
                 }
-                Serial.println("DONE");
             } else if (command == "MBT") {
                 if (param_3 == "RLS") {
                     driveController.moveBackward(param_1.toInt(), param_2.toFloat(), DCMotor::ZeroPowerBehavior::RELEASE);
                 } else {
                     driveController.moveBackward(param_1.toInt(), param_2.toFloat(), DCMotor::ZeroPowerBehavior::BRAKE);
                 }
-                Serial.println("DONE");
             } else if (command == "MLT") {
                 if (param_3 == "RLS") {
                     driveController.moveLeft(param_1.toInt(), param_2.toFloat(), DCMotor::ZeroPowerBehavior::RELEASE);
                 } else {
                     driveController.moveLeft(param_1.toInt(), param_2.toFloat(), DCMotor::ZeroPowerBehavior::BRAKE);
                 }
-                Serial.println("DONE");
             } else if (command == "MRT") {
                 if (param_3 == "RLS") {
                     driveController.moveRight(param_1.toInt(), param_2.toFloat(), DCMotor::ZeroPowerBehavior::RELEASE);
                 } else {
                     driveController.moveRight(param_1.toInt(), param_2.toFloat(), DCMotor::ZeroPowerBehavior::BRAKE);
                 }
-                Serial.println("DONE");
             } else if (command == "RLT") {
                 if (param_3 == "RLS") {
                     driveController.rotateLeft(param_1.toInt(), param_2.toFloat(), DCMotor::ZeroPowerBehavior::RELEASE);
                 } else {
                     driveController.rotateLeft(param_1.toInt(), param_2.toFloat(), DCMotor::ZeroPowerBehavior::BRAKE);
                 }
-                Serial.println("DONE");
             } else if (command == "RRT") {
                 if (param_3 == "RLS") {
                     driveController.rotateRight(param_1.toInt(), param_2.toFloat(), DCMotor::ZeroPowerBehavior::RELEASE);
                 } else {
                     driveController.rotateRight(param_1.toInt(), param_2.toFloat(), DCMotor::ZeroPowerBehavior::BRAKE);
                 }
-                Serial.println("DONE");
             }
 
             /* GATE - Command Control */
             else if (command == "GTE") {
                 if (param_1 == "OPN") {
                     servoGateController.goToDeg(120);
-
                     Serial.println("DONE");
                 } else if (param_1 == "CLS") {
                     servoGateController.goToDeg(180);
+                    Serial.println("DONE");
+                }
+            }
 
+            /* CRANE - Command Control */
+            else if (command == "CRN") {
+                if (param_1 == "HIGH") {
+                    servoCraneController.goToDeg(70);
+                } else if (param_1 == "DEFAULT") {
+                    servoCraneController.goToDeg(120);
+                } else if (param_1 == "LOW") {
+                    servoCraneController.goToDeg(175);
+                }
+
+                Serial.println("DONE");
+            }
+
+            /* HLIFT - Command Control */
+            else if (command == "HLF") {
+                if (param_1 == "OPN") {
+                    servoHliftController.runToLimit(ServoCNController::Direction::REVERSE, 255);
+                    Serial.println("DONE");
+                } else if (param_1 == "CLS") {
+                    servoHliftController.runToLimit(ServoCNController::Direction::FORWARD, 255);
                     Serial.println("DONE");
                 }
             }
 
             /* KEEPER - Command Control */
-            else if (command == "KPB") {
-                /* Keep Ball */
-                servoCraneController.goToDeg(120);
-                servoHliftController.runToLimit(ServoCNController::Direction::REVERSE, 255);
-
-                keeperUncatch();
-                servoCraneController.goToDeg(175, 50);
-                keeperCatch();
-
-                servoCraneController.goToDeg(120);
-                servoHliftController.runToLimit(ServoCNController::Direction::FORWARD, 255);
-
-                Serial.println("DONE");
-            } else if (command == "SRS") {
-                /* Same Base Release */
-                servoCraneController.goToDeg(120);
-                servoHliftController.runToLimit(ServoCNController::Direction::REVERSE, 255);
-
-                keeperUncatch();
-                delay(500);
-                keeperCatch();
-
-                servoHliftController.runToLimit(ServoCNController::Direction::FORWARD, 255);
-
-                Serial.println("DONE");
-            } else if (command == "YRS") {
-                /* Yellow Release */
-                servoCraneController.goToDeg(70);
-                servoHliftController.runToLimit(ServoCNController::Direction::REVERSE, 255);
-
-                keeperUncatch();
-                delay(500);
-                keeperCatch();
-
-                servoHliftController.runToLimit(ServoCNController::Direction::FORWARD, 255);
-                servoCraneController.goToDeg(120);
-
-                Serial.println("DONE");
-            } else if (command == "BRS") {
-                /* Basket Release */
-                keeperUncatch();
-                delay(500);
-                keeperCatch();
-
-                Serial.println("DONE");
+            else if (command == "KPR") {
+                if (param_1 == "OPN") {
+                    keeperUncatch();
+                    Serial.println("DONE");
+                } else if (param_1 == "CLS") {
+                    keeperCatch();
+                    Serial.println("DONE");
+                }
             }
 
             /* SPACIAL_OPTION - Command Control */
             else if (command == "OPT") {
-                /* Move Front to Brake Line */
-                if (param_1 == "MFBL") {
+                if (param_1 == "KPB") {
+                    /* Keep Ball */
+                    servoCraneController.goToDeg(120);
+                    servoHliftController.runToLimit(ServoCNController::Direction::REVERSE, 255);
+
+                    keeperUncatch();
+                    servoCraneController.goToDeg(175);
+                    keeperCatch();
+
+                    servoCraneController.goToDeg(120);
+                    servoHliftController.runToLimit(ServoCNController::Direction::FORWARD, 255);
+
+                    Serial.println("DONE");
+                } else if (param_1 == "SRS") {
+                    /* Same Base Release */
+                    servoCraneController.goToDeg(120);
+                    servoHliftController.runToLimit(ServoCNController::Direction::REVERSE, 255);
+
+                    keeperUncatch();
+                    delay(500);
+                    keeperCatch();
+
+                    servoHliftController.runToLimit(ServoCNController::Direction::FORWARD, 255);
+
+                    Serial.println("DONE");
+                } else if (param_1 == "YRS") {
+                    /* Yellow Release */
+                    servoCraneController.goToDeg(70);
+                    servoHliftController.runToLimit(ServoCNController::Direction::REVERSE, 255);
+
+                    keeperUncatch();
+                    delay(500);
+                    keeperCatch();
+
+                    servoHliftController.runToLimit(ServoCNController::Direction::FORWARD, 255);
+                    servoCraneController.goToDeg(120);
+
+                    Serial.println("DONE");
+                } else if (param_1 == "BRS") {
+                    /* Basket Release */
+                    keeperUncatch();
+                    delay(500);
+                    keeperCatch();
+
+                    Serial.println("DONE");
+                }
+
+                else if (param_1 == "MFBL") {
+                    /* Move Front to Brake Line */
                     driveController.moveForward(param_2.toInt());
 
                     bool irLeft = digitalRead(IR_LEFT_PIN);
@@ -281,9 +307,8 @@ void loop() {
                     driveController.stop(DCMotor::ZeroPowerBehavior::BRAKE);
 
                     Serial.println("DONE");
-                }
-                /* Move Back to Brake Line */
-                else if (param_1 == "MBBL") {
+                } else if (param_1 == "MBBL") {
+                    /* Move Back to Brake Line */
                     driveController.moveBackward(param_2.toInt());
 
                     bool irLeft = digitalRead(IR_LEFT_PIN);
@@ -312,9 +337,8 @@ void loop() {
                     driveController.stop(DCMotor::ZeroPowerBehavior::BRAKE);
 
                     Serial.println("DONE");
-                }
-                /* Move Left to Brake Line */
-                else if (param_1 == "MLBL") {
+                } else if (param_1 == "MLBL") {
+                    /* Move Left to Brake Line */
                     driveController.moveLeft(param_2.toInt());
 
                     bool irLeft = digitalRead(IR_LEFT_PIN);
@@ -325,9 +349,8 @@ void loop() {
                     driveController.stop(DCMotor::ZeroPowerBehavior::BRAKE);
 
                     Serial.println("DONE");
-                }
-                /* Move Right to Brake Line */
-                else if (param_1 == "MRBL") {
+                } else if (param_1 == "MRBL") {
+                    /* Move Right to Brake Line */
                     driveController.moveRight(param_2.toInt());
 
                     bool irRight = digitalRead(IR_RIGHT_PIN);
@@ -350,6 +373,7 @@ void loop() {
         }
     }
 }
+
 /* ---------------------------- Robot Function ----------------------------------------------------- */
 void keeperCatch() {
     motorKeeper.setRunMode(DCMotor::RunMode::RUN_TO_POSITION);
@@ -358,9 +382,9 @@ void keeperCatch() {
 
     motorKeeper.setDirection(DCMotor::Direction::FORWARD);
 
-    motorKeeper.setPower(255);
+    motorKeeper.setSpeed(720);
 
-    motorKeeper.run();
+    motorKeeper.start(255);
 
     /* Block Arduino process! */
     while (motorKeeper.isRunning()) {
@@ -374,37 +398,13 @@ void keeperUncatch() {
 
     motorKeeper.setDirection(DCMotor::Direction::REVERSE);
 
-    motorKeeper.setPower(255);
+    motorKeeper.setSpeed(720);
 
-    motorKeeper.run();
+    motorKeeper.start(255);
 
     /* Block Arduino process! */
     while (motorKeeper.isRunning()) {
         delay(1);
-    }
-}
-
-/* ---------------------------- Adjust Motor Speed V.4 Function ------------------------------------ */
-void balanceMotorSpeed(DCMotor *motor_1, DCMotor *motor_2) {
-    long diff = motor_1->getEncoderPosition() - motor_2->getEncoderPosition();
-
-    const float wantedPower = (motor_1->getPower() + motor_2->getPower())/2;
-
-    /* Kp from Linear regresion (experiment)*/
-    /*
-      [speed]   ->      [Kp]
-      30        ->      0.2
-      50        ->      0.4
-      80        ->      0.7
-      110       ->      1.1
-      130       ->      1.4
-      150       ->      1.8
-    */
-    const float Kp = (0.01302 * wantedPower) - 0.2599;
-    
-    if (motor_1->isRunning() || motor_2->isRunning()) {
-        motor_1->setActuallyPower(uint8_t(max(min(motor_1->getPower() - (Kp * diff), 255), 0)));
-        motor_2->setActuallyPower(uint8_t(max(min(motor_2->getPower() + (Kp * diff), 255), 0)));
     }
 }
 

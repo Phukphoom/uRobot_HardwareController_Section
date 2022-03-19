@@ -5,10 +5,10 @@
 #define ServoCNController_h
 
 class ServoCNController {
-   public:
+  public:
     enum class Direction {
-        FORWARD = 0,
-        REVERSE = 1
+      FORWARD = 0,
+      REVERSE = 1
     };
 
     ServoCNController(Servo* servo, uint8_t pinForwardStop, uint8_t pinReverseStop);
@@ -16,7 +16,7 @@ class ServoCNController {
 
     void runToLimit(Direction direction, uint8_t speed);
 
-   private:
+  private:
     uint8_t pinForwardStop, pinReverseStop;
 
     Servo* servo;
